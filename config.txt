@@ -1,0 +1,11 @@
+
+
+val1=Hallo
+
+val2=Wordl
+
+
+
+
+# Hallo
+# This is a comment
