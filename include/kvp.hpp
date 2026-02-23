@@ -1,5 +1,33 @@
 // KeyValueParser.hpp
 // 
+//
+// LICENSE:
+
+/*
+MIT License
+
+Copyright (c) 2026 ShadowDara
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+// 
 // Version 1.1.0
 // 
 // New Features in 1.1.0
@@ -8,7 +36,8 @@
 // - delete entry
 // - check for double entries (if a key already exists,
 //   it will be overwritten, but the user will be informed
-//   about it in the console)
+//   about it in the console) but only while parsing, not while
+//   appending or overwriting.
 // 
 // Version 1.0.0
 // - Initial Release
@@ -86,7 +115,7 @@ namespace KeyValueParser
 		parse_kvp2(const std::string& input);
 
 	// Function to append a key-value pair to the unordered_map.
-	// INFO: If the key already exists, it will be overwritten.
+	// INFO: If the key already exists, it WONT be overwritten.
 	std::unordered_map<std::string, std::string>
 		append_entry(
 			const std::string& entryname,
@@ -102,7 +131,7 @@ namespace KeyValueParser
 	);
 
 	// Function to overwrite a key-value pair in the unordered_map.
-	// INFO: If the key does not exist, it will be added to the unordered_map.
+	// INFO: If the key does not exist, it will be NOT added to the unordered_map.
 	std::unordered_map<std::string, std::string>
 		overwrite_entry(
 			const std::string& entryname,
@@ -119,7 +148,7 @@ namespace KeyValueParser
 
 	// Function to delete a key-value pair from the unordered_map.
 	// INFO: If the key does not exist, the unordered_map will
-	// be returned unchanged.
+	// be returned unchanged and an error message will be printed to the console.
 	std::unordered_map<std::string, std::string>
 		delete_entry(
 			const std::string& entryname,

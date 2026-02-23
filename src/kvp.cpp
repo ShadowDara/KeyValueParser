@@ -93,10 +93,12 @@ std::unordered_map<std::string, std::string>
 
 		// Check for doublicates
 		if (result.find(buffer1) != result.end()) {
-			std::cerr << "Duplicate key found: " << buffer1 << std::endl;
+			std::cerr << "Duplicate key found: " << buffer1
+				<< " Value: " << buffer2 << "\n";
 			// optionally throw or skip
 		}
-		else {
+		else
+		{
 			result[buffer1] = buffer2;
 		}
 	}
@@ -105,6 +107,8 @@ std::unordered_map<std::string, std::string>
 }
 
 #pragma endregion
+
+#pragma region Writer Implementation
 
 // Add a new entry to the unordered_map
 std::unordered_map<std::string, std::string>
@@ -115,19 +119,20 @@ KeyValueParser::append_entry(
 )
 {
 	std::unordered_map<std::string, std::string> result = kvp;
-	result[entryname] = entryvalue;
-	return result;
-}
 
-// Add a new Line to the Config
-std::string KeyValueParser::append_entry(
-	const std::string& entryname,
-	const std::string& entryvalue,
-	const std::string& input
-)
-{
-	std::string line = entryname + "=" + entryvalue;
-	return input + "\n" + line;
+	// Check if the Entry already exists, if it does,
+	// we will not add it again.
+	if (result.find(entryname) != result.end()) {
+		std::cerr << "Entry already exists!: " << entryname 
+			<< " Value: " << entryvalue << "\n";
+		// optionally throw or skip
+	}
+	else
+	{
+		result[entryname] = entryvalue;
+	}
+
+	return result;
 }
 
 // Overwrite a key-value pair in the unordered_map
@@ -139,8 +144,51 @@ KeyValueParser::overwrite_entry(
 )
 {
 	std::unordered_map<std::string, std::string> result = kvp;
-	result[entryname] = entryvalue;
+
+	// Check if the entry exists, if it does, we will overwrite it,
+	if (result.find(entryname) != result.end()) {
+		result[entryname] = entryvalue;
+	}
+	else
+	{
+		std::cerr << "Entry already exists!: " << entryname << "\n";
+	}
+
 	return result;
+}
+
+// Delete a key-value pair from the unordered_map
+std::unordered_map<std::string, std::string>
+KeyValueParser::delete_entry(const std::string& entryname,
+	const std::unordered_map<std::string, std::string>& kvp)
+{ 
+	std::unordered_map<std::string, std::string> result = kvp;
+
+	// Check if the entry exists, if it does, we will delete it,
+	if (result.find(entryname) != result.end()) {
+		result.erase(entryname);
+	}
+	else
+	{
+		std::cerr << "Entry doesnt exist! : " << entryname << "\n";
+	}
+
+	return result;
+}
+
+#pragma endregion
+
+#pragma region Source Writer Implementation
+
+// Add a new Line to the Config
+std::string KeyValueParser::append_entry(
+	const std::string& entryname,
+	const std::string& entryvalue,
+	const std::string& input
+)
+{
+	std::string line = entryname + "=" + entryvalue;
+	return input + "\n" + line;
 }
 
 // Overwrite a key-value pair in the original config string.
@@ -182,16 +230,6 @@ std::string KeyValueParser::overwrite_entry(
 	return output;
 }
 
-// Delete a key-value pair from the unordered_map
-std::unordered_map<std::string, std::string>
-KeyValueParser::delete_entry(const std::string& entryname,
-	const std::unordered_map<std::string, std::string>& kvp)
-{ 
-	std::unordered_map<std::string, std::string> result = kvp;
-	result.erase(entryname);
-	return result;
-}
-
 // Delete a key-value pair from the original config string.
 // Keeps all comments and empty lines intact.
 std::string KeyValueParser::delete_entry(
@@ -222,3 +260,10 @@ std::string KeyValueParser::delete_entry(
 
 	return output;
 }
+
+#pragma endregion
+
+// License: MIT License Shadowdara 2026
+// End KVP Parser Implementation
+
+// kvp.cpp
