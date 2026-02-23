@@ -2,6 +2,7 @@
 
 #include <kvp.hpp>
 
+#pragma region Parser Implementation
 
 // Function to parse key-value pairs from a string.
 // The input string is expected to have the format:
@@ -86,24 +87,138 @@ std::unordered_map<std::string, std::string>
 		std::string buffer2;
 
 		// Interate per Character
-		for (size_t i = 0; i < line.size(); i++)
-		{
-			if (line[i] == '=')
-			{
-				useBuffer1 = false;
-			}
-			else if (useBuffer1)
-			{
-				buffer1 += line[i];
-			}
-			else
-			{
-				buffer2 += line[i];
-			}
-		}
+		auto pos = line.find('=');
+		buffer1 = line.substr(0, pos);
+		buffer2 = line.substr(pos + 1);
 
-		result[buffer1] = buffer1.empty() ? "" : buffer2;
+		// Check for doublicates
+		if (result.find(buffer1) != result.end()) {
+			std::cerr << "Duplicate key found: " << buffer1 << std::endl;
+			// optionally throw or skip
+		}
+		else {
+			result[buffer1] = buffer2;
+		}
 	}
 
 	return result;
+}
+
+#pragma endregion
+
+// Add a new entry to the unordered_map
+std::unordered_map<std::string, std::string>
+KeyValueParser::append_entry(
+	const std::string& entryname,
+	const std::string& entryvalue,
+	const std::unordered_map<std::string, std::string>& kvp
+)
+{
+	std::unordered_map<std::string, std::string> result = kvp;
+	result[entryname] = entryvalue;
+	return result;
+}
+
+// Add a new Line to the Config
+std::string KeyValueParser::append_entry(
+	const std::string& entryname,
+	const std::string& entryvalue,
+	const std::string& input
+)
+{
+	std::string line = entryname + "=" + entryvalue;
+	return input + "\n" + line;
+}
+
+// Overwrite a key-value pair in the unordered_map
+std::unordered_map<std::string, std::string>
+KeyValueParser::overwrite_entry(
+	const std::string& entryname,
+	const std::string& entryvalue,
+	const std::unordered_map<std::string, std::string>& kvp
+)
+{
+	std::unordered_map<std::string, std::string> result = kvp;
+	result[entryname] = entryvalue;
+	return result;
+}
+
+// Overwrite a key-value pair in the original config string.
+// Keeps all comments and empty lines intact.
+std::string KeyValueParser::overwrite_entry(
+	const std::string& entryname,
+	const std::string& entryvalue,
+	const std::string& input
+)
+{
+	std::stringstream ss(input);
+	std::string line;
+	std::string output;
+	bool replaced = false;
+
+	while (std::getline(ss, line)) {
+		// Skip empty lines and comments
+		if (line.empty() || line.starts_with('#')) {
+			output += line + "\n";
+			continue;
+		}
+
+		auto pos = line.find('=');
+		if (pos != std::string::npos) {
+			std::string key = line.substr(0, pos);
+			if (key == entryname) {
+				line = entryname + "=" + entryvalue;
+				replaced = true;
+			}
+		}
+		output += line + "\n";
+	}
+
+	// If the key was not found, append it at the end
+	if (!replaced) {
+		output += entryname + "=" + entryvalue + "\n";
+	}
+
+	return output;
+}
+
+// Delete a key-value pair from the unordered_map
+std::unordered_map<std::string, std::string>
+KeyValueParser::delete_entry(const std::string& entryname,
+	const std::unordered_map<std::string, std::string>& kvp)
+{ 
+	std::unordered_map<std::string, std::string> result = kvp;
+	result.erase(entryname);
+	return result;
+}
+
+// Delete a key-value pair from the original config string.
+// Keeps all comments and empty lines intact.
+std::string KeyValueParser::delete_entry(
+	const std::string& entryname,
+	const std::string& input
+)
+{
+	std::stringstream ss(input);
+	std::string line;
+	std::string output;
+
+	while (std::getline(ss, line)) {
+		// Skip empty lines and comments
+		if (line.empty() || line.starts_with('#')) {
+			output += line + "\n";
+			continue;
+		}
+
+		auto pos = line.find('=');
+		if (pos != std::string::npos) {
+			std::string key = line.substr(0, pos);
+			if (key == entryname) {
+				continue; // skip this line, effectively deleting it
+			}
+		}
+		output += line + "\n";
+	}
+
+	return output;
 }
