@@ -184,13 +184,12 @@ namespace KeyValueParser
 
 #pragma endregion
 
+
 #pragma region Source Implementation
 
 #ifdef KVP_IMPLEMENTATION
 
 // KeyValue Parser Implementation
-
-#include "kvp.hpp"
 
 #pragma region Parser Implementation
 
