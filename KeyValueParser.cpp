@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 {
 	cout << "KeyValueParser." << "\n";
 
-    std::ifstream file{ "C:/Users/schueler/source/repos/KeyValueParser/config.txt" };
+    std::ifstream file{ "config.txt" };
     if (!file) {
         std::cerr << "Datei konnte nicht geöffnet werden\n";
         return 1;
