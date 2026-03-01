@@ -40,7 +40,11 @@ SOFTWARE.
 */
 
 // 
-// Version 1.1.0
+// Version 1.2.0
+// 
+// New Features in 1.2.0
+// - optimised the Parser, now it uses string_views to avoid unnecessary
+//   copying of strings while parsing,
 // 
 // New Features in 1.1.0
 // - append entry
@@ -113,10 +117,19 @@ SOFTWARE.
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <string_view>
 
 
 namespace KeyValueParser
 {
+	// Function to trim whitespace from a string_view.
+	inline std::string_view trim_view(std::string_view sv) {
+		size_t start = sv.find_first_not_of(" \t");
+		size_t end = sv.find_last_not_of(" \t");
+		if (start == std::string_view::npos) return ""; // nur Leerzeichen
+		return sv.substr(start, end - start + 1);
+	}
+
 	// Function to parse key-value pairs from a string.
 	// The input string is expected to have the format:
 	// val1=val2
@@ -258,37 +271,29 @@ KeyValueParser::parse_kvp2(const std::string& input)
 			continue;
 		}
 
-		// Lines without '=' will be ignored
-		if (line.find('=') == std::string::npos)
-		{
-			continue;
-		}
-
 		// Comment Lines
 		if (line.starts_with('#'))
 		{
 			continue;
 		}
 
-		bool useBuffer1 = true;
-
-		std::string buffer1;
-		std::string buffer2;
+		std::string_view line_view(line);
 
 		// Interate per Character
-		auto pos = line.find('=');
-		buffer1 = line.substr(0, pos);
-		buffer2 = line.substr(pos + 1);
+		auto pos = line_view.find('=');
+		if (pos == std::string_view::npos) continue;
 
-		// Check for doublicates
-		if (result.find(buffer1) != result.end()) {
-			std::cerr << "Duplicate key found: " << buffer1
-				<< " Value: " << buffer2 << "\n";
-			// optionally throw or skip
-		}
-		else
-		{
-			result[buffer1] = buffer2;
+		std::string_view key = line_view.substr(0, pos);
+		std::string_view value = line_view.substr(pos + 1);
+
+		// trim hier noch auf string_view
+		key = trim_view(key);
+		value = trim_view(value);
+
+
+		// Dann in Map einfügen, erst jetzt kopieren
+		if (!result.emplace(std::string(key), std::string(value)).second) {
+			std::cerr << "Duplicate key found: " << key << "\n";
 		}
 	}
 

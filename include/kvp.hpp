@@ -28,7 +28,11 @@ SOFTWARE.
 */
 
 // 
-// Version 1.1.0
+// Version 1.2.0
+// 
+// New Features in 1.2.0
+// - optimised the Parser, now it uses string_views to avoid unnecessary
+//   copying of strings while parsing,
 // 
 // New Features in 1.1.0
 // - append entry
@@ -96,10 +100,19 @@ SOFTWARE.
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <string_view>
 
 
 namespace KeyValueParser
 {
+	// Function to trim whitespace from a string_view.
+	inline std::string_view trim_view(std::string_view sv) {
+		size_t start = sv.find_first_not_of(" \t");
+		size_t end = sv.find_last_not_of(" \t");
+		if (start == std::string_view::npos) return ""; // nur Leerzeichen
+		return sv.substr(start, end - start + 1);
+	}
+
 	// Function to parse key-value pairs from a string.
 	// The input string is expected to have the format:
 	// val1=val2

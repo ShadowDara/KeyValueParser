@@ -69,37 +69,29 @@ std::unordered_map<std::string, std::string>
 			continue;
 		}
 
-		// Lines without '=' will be ignored
-		if (line.find('=') == std::string::npos)
-		{
-			continue;
-		}
-
 		// Comment Lines
 		if (line.starts_with('#'))
 		{
 			continue;
 		}
 
-		bool useBuffer1 = true;
-
-		std::string buffer1;
-		std::string buffer2;
+		std::string_view line_view(line);
 
 		// Interate per Character
-		auto pos = line.find('=');
-		buffer1 = line.substr(0, pos);
-		buffer2 = line.substr(pos + 1);
+		auto pos = line_view.find('=');
+		if (pos == std::string_view::npos) continue;
 
-		// Check for doublicates
-		if (result.find(buffer1) != result.end()) {
-			std::cerr << "Duplicate key found: " << buffer1
-				<< " Value: " << buffer2 << "\n";
-			// optionally throw or skip
-		}
-		else
-		{
-			result[buffer1] = buffer2;
+		std::string_view key = line_view.substr(0, pos);
+		std::string_view value = line_view.substr(pos + 1);
+
+		// trim hier noch auf string_view
+		key = trim_view(key);
+		value = trim_view(value);
+
+
+		// Dann in Map einfügen, erst jetzt kopieren
+		if (!result.emplace(std::string(key), std::string(value)).second) {
+			std::cerr << "Duplicate key found: " << key << "\n";
 		}
 	}
 
