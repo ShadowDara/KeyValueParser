@@ -91,6 +91,17 @@ namespace KeyValueParser2 {
     }
 
 
+    // Function to merge 2 Maps together
+    // the 2nd Map will overright the first one when entries are already existing
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
+    void merge_maps(StoreType& target, const StoreType& other)
+    {
+        for (const auto& [key, value] : other) {
+            target[key] = value; // überschreibt automatisch
+        }
+    }
+
+
     // --- Writer functions operating on store ---
     template <typename StoreType = std::unordered_map<std::string, std::string>>
     void append_entry(StoreType& store, const std::string& key, const std::string& value)
