@@ -20,14 +20,14 @@
 namespace KeyValueParser2 {
 
     // --- Thin template-based store ---
-    template <typename MapType = std::unordered_map<std::string, std::string>>
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
     class KeyValueStore
     {
-        MapType data;
+        StoreType data;
 
     public:
         KeyValueStore() = default;
-        KeyValueStore(const MapType& init) : data(init) {}
+        KeyValueStore(const StoreType& init) : data(init) {}
 
         // Funtion to set a Value
         void set(const std::string& key, const std::string& value)
@@ -36,9 +36,9 @@ namespace KeyValueParser2 {
         }
 
         // Function to get a Value
-        std::optional<std::string> get(const std::string& key) const 
-
-            auto it = data.find(key);
+        std::optional<std::string> get(const std::string& key) const
+        {
+            typename StoreType::const_iterator it = data.find(key);
             if (it != data.end()) return it->second;
             return std::nullopt;
         }
@@ -55,16 +55,18 @@ namespace KeyValueParser2 {
             return data.find(key) != data.end();
         }
 
-        const MapType& get_data() const
+        const StoreType& get_data() const
         {
             return data;
         }
     };
 
+
     // --- Parser functions ---
-    template <typename StoreType>
-    StoreType parse_kvp2(const std::string& input) {
-        StoreType store;
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
+    KeyValueParser2::KeyValueStore<StoreType> parse_kvp2(const std::string& input)
+    {
+        KeyValueParser2::KeyValueStore<StoreType> store;
         std::stringstream ss(input);
         std::string line;
 
@@ -72,11 +74,11 @@ namespace KeyValueParser2 {
             if (line.empty() || line.starts_with('#')) continue;
 
             std::string_view line_view(line);
-            auto pos = line_view.find('=');
+            std::size_t pos = line_view.find('=');
             if (pos == std::string_view::npos) continue;
 
-            std::string_view key = trim_view(line_view.substr(0, pos));
-            std::string_view value = trim_view(line_view.substr(pos + 1));
+            std::string_view key = KeyValueParser::trim_view(line_view.substr(0, pos));
+            std::string_view value = KeyValueParser::trim_view(line_view.substr(pos + 1));
 
             if (!store.contains(std::string(key))) {
                 store.set(std::string(key), std::string(value));
@@ -88,9 +90,11 @@ namespace KeyValueParser2 {
         return store;
     }
 
+
     // --- Writer functions operating on store ---
-    template <typename StoreType>
-    void append_entry(StoreType& store, const std::string& key, const std::string& value) {
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
+    void append_entry(StoreType& store, const std::string& key, const std::string& value)
+    {
         if (!store.contains(key)) {
             store.set(key, value);
         }
@@ -99,8 +103,10 @@ namespace KeyValueParser2 {
         }
     }
 
-    template <typename StoreType>
-    void overwrite_entry(StoreType& store, const std::string& key, const std::string& value) {
+
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
+    void overwrite_entry(StoreType& store, const std::string& key, const std::string& value)
+    {
         if (store.contains(key)) {
             store.set(key, value);
         }
@@ -109,8 +115,10 @@ namespace KeyValueParser2 {
         }
     }
 
-    template <typename StoreType>
-    void delete_entry(StoreType& store, const std::string& key) {
+
+    template <typename StoreType = std::unordered_map<std::string, std::string>>
+    void delete_entry(StoreType& store, const std::string& key)
+    {
         if (store.contains(key)) {
             store.erase(key);
         }
@@ -119,10 +127,12 @@ namespace KeyValueParser2 {
         }
     }
 
+
     // --- Writer functions operating on strings ---
     inline std::string append_entry(const std::string& key, const std::string& value, const std::string& input) {
         return input + "\n" + key + "=" + value;
     }
+
 
     inline std::string overwrite_entry(const std::string& key, const std::string& value, const std::string& input) {
         std::stringstream ss(input);
@@ -136,7 +146,7 @@ namespace KeyValueParser2 {
                 continue;
             }
 
-            auto pos = line.find('=');
+            std::size_t pos = line.find('=');
             if (pos != std::string::npos) {
                 std::string cur_key = line.substr(0, pos);
                 if (cur_key == key) {
@@ -151,6 +161,7 @@ namespace KeyValueParser2 {
         return output;
     }
 
+
     inline std::string delete_entry(const std::string& key, const std::string& input) {
         std::stringstream ss(input);
         std::string line;
@@ -162,7 +173,7 @@ namespace KeyValueParser2 {
                 continue;
             }
 
-            auto pos = line.find('=');
+            std::size_t pos = line.find('=');
             if (pos != std::string::npos) {
                 std::string cur_key = line.substr(0, pos);
                 if (cur_key == key) continue;
