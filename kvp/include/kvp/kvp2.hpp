@@ -96,8 +96,8 @@ namespace KeyValueParser2 {
     template <typename StoreType = std::unordered_map<std::string, std::string>>
     void merge_maps(StoreType& target, const StoreType& other)
     {
-        for (const auto& [key, value] : other) {
-            target[key] = value; // überschreibt automatisch
+        for (const auto& [key, value] : other.get_data())
+            target.set(key, value); // überschreibt automatisch
         }
     }
 
