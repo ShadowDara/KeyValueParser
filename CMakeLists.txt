@@ -9,13 +9,16 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Add the KVP Lib
+add_subdirectory(kvp)
+
 project ("KeyValueParser")
 
-include_directories("include")
-include_directories("src")
-
 # Fügen Sie der ausführbaren Datei dieses Projekts eine Quelle hinzu.
-add_executable (KeyValueParser "KeyValueParser.cpp"  "src/kvp.cpp")
+add_executable (KeyValueParser "KeyValueParser.cpp")
+
+# Link the Libary
+target_link_libraries(KeyValueParser kvp)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET KeyValueParser PROPERTY CXX_STANDARD 20)
