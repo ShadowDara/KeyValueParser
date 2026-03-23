@@ -7,17 +7,33 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <type_traits>
+#include <cstring>
+
+#include <kvpdb/kvpdb_internal.hpp>
 
 
+// Beispielstruktur für die Werte
 struct default_db_struct
 {
-    std::string tempname = "default";
+    char tempname[8] = "default";
 
     default_db_struct() = default;
-    default_db_struct(const std::string& name) : tempname(name) {}
+    default_db_struct(const std::string& name) : tempname()
+    {
+        std::strncpy(tempname, name.c_str(), sizeof(tempname) - 1);
+        tempname[sizeof(tempname) - 1] = '\0';
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const default_db_struct& obj)
+    {
+        os << obj.tempname;
+        return os;
+    }
 };
 
 
+// Einfaches Key-Value Store mit Binary-Speicherung
 template <typename DBStruct = default_db_struct>
 class KeyValueDB {
 private:
@@ -28,10 +44,12 @@ private:
 
 public:
     // Insert / Update
-    void put(const std::string& key, DBStruct& value)
+    void put(const std::string& key, const DBStruct& value)
     {
+        if (store.find(key) == store.end()) {
+            index[key.empty() ? '\0' : key[0]].push_back(key);
+        }
         store[key] = value;
-        index[key[0]].push_back(key);
     }
 
     // Read
@@ -52,24 +70,34 @@ public:
         // Index wird hier nicht bereinigt (vereinfachte Version)
     }
 
-    // Save to file
+    // Save to file as Binary
     void save(const std::string& filename) const
     {
-        std::ofstream file(filename);
+        std::ofstream file(filename, std::ios::binary);
         if (!file) {
             std::cerr << "Fehler beim Öffnen der Datei zum Schreiben\n";
             return;
         }
 
-        for (const auto& pair : store) {
-            file << pair.first << "=" << pair.second << "\n";
+        // Save number of entries
+        size_t count = store.size();
+        file.write(reinterpret_cast<const char*>(&count), sizeof(count));
+
+        // Save Entries
+        for (const auto& [key, value] : store) {
+            size_t keySize = key.size();
+            file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
+            file.write(key.data(), keySize);
+
+            // Value als Binary speichern
+            file.write(reinterpret_cast<const char*>(&value), sizeof(DBStruct));
         }
     }
 
-    // Load from file
+    // Load from file as Binary
     void load(const std::string& filename)
     {
-        std::ifstream file(filename);
+        std::ifstream file(filename, std::ios::binary);
         if (!file) {
             std::cerr << "Fehler beim Öffnen der Datei zum Lesen\n";
             return;
@@ -78,28 +106,37 @@ public:
         store.clear();
         index.clear();
 
-        std::string line;
-        while (std::getline(file, line)) {
-            std::stringstream ss(line);
-            std::string key, value;
+        // Load Number of entries
+        size_t count;
+        file.read(reinterpret_cast<char*>(&count), sizeof(count));
 
-            if (std::getline(ss, key, '=') && std::getline(ss, value)) {
-                put(key, value);
-            }
+        // Load Entries
+            for (size_t i = 0; i < count; ++i) {
+            size_t keySize;
+            file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+
+            std::string key(keySize, '\0');
+            file.read(&key[0], keySize);
+
+            DBStruct value;
+            file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct));
+
+            put(key, value);
         }
     }
 
     // Get keys by first character (for testing)
-    std::vector<std::string> getByFirstChar(char c)
+    std::vector<std::string> getByFirstChar(char c) const
     {
-        if (index.find(c) != index.end()) {
-            return index[c];
+        auto it = index.find(c);
+        if (it != index.end()) {
+            return it->second;
         }
         return {};
     }
 
     // Print all key-value pairs (for testing)
-    void printAll() const
+    void printAll() const   
     {
         for (const auto& pair : store) {
             std::cout << pair.first << " => " << pair.second << "\n";

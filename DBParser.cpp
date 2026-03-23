@@ -10,26 +10,26 @@
 
 
 int main() {
-    KeyValueDB db;
+    KeyValueDB<default_db_struct> db;
 
-    db.put("apple", &default_db_struct("fruit"));
-    db.put("banana", &default_db_struct("fruit"));
-    db.put("carrot", &default_db_struct("vegetable"));
+    db.put("apple", default_db_struct("fruit"));
+    db.put("banana", default_db_struct("fruit"));
+    db.put("carrot", default_db_struct("vegetable"));
 
     std::cout << "Initial DB:\n";
     db.printAll();
 
     db.save("db.txt");
 
-    KeyValueDB db2;
+    KeyValueDB<default_db_struct> db2;
     db2.load("db.txt");
 
     std::cout << "\nGeladene DB:\n";
     db2.printAll();
 
-    std::string value;
+    default_db_struct value;
     if (db2.get("apple", value)) {
-        std::cout << "\napple => " << value << "\n";
+        std::cout << "\napple => " << value.tempname << "\n";
     }
 
     std::cout << "\nIndex (a):\n";
