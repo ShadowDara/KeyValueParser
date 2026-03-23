@@ -1,6 +1,6 @@
 # KVP
 #
-# this is a simple little KeyValue Parser Libary
+# this is a simple little KeyValue Parser Library
 # by Shadowdara
 #
 # licensed under MIT 2026 Shadowdara
