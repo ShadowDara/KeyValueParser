@@ -20,13 +20,15 @@ endif()
 # Link Time Optimization (LTO) aktivieren für Release-Builds
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
+
+project ("KeyValueParser")
+
+
 # Add the KVP Lib
 add_subdirectory(kvp)
 # Add the KVPDB Lib
 add_subdirectory(kvpdb)
 
-
-project ("KeyValueParser")
 
 # Fügen Sie der ausführbaren Datei dieses Projekts eine Quelle hinzu.
 add_executable (KeyValueParser "KeyValueParser.cpp")
