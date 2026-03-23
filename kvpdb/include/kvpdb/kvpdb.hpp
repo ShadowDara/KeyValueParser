@@ -8,7 +8,8 @@
 #include <sstream>
 #include <vector>
 #include <type_traits>
-#include <cstring>
+#include <algorithm> // für std::remove
+#include <cstring>   // für std::strncpy
 
 #include <kvpdb/kvpdb_internal.hpp>
 
@@ -46,10 +47,12 @@ public:
     // Insert / Update
     void put(const std::string& key, const DBStruct& value)
     {
-        if (store.find(key) == store.end()) {
+        bool isNewKey = (store.find(key) == store.end());
+        store[key] = value;
+
+        if (isNewKey) {
             index[key.empty() ? '\0' : key[0]].push_back(key);
         }
-        store[key] = value;
     }
 
     // Read
@@ -66,8 +69,19 @@ public:
     // Delete
     void remove(const std::string& key)
     {
-        store.erase(key);
-        // Index wird hier nicht bereinigt (vereinfachte Version)
+        auto it = store.find(key);
+        if (it != store.end()) {
+            // Entferne aus Index
+            char c = key.empty() ? '\0' : key[0];
+            auto& vec = index[c];
+            vec.erase(std::remove(vec.begin(), vec.end(), key), vec.end());
+            if (vec.empty()) {
+                index.erase(c);
+            }
+
+            // Entferne aus Store
+            store.erase(it);
+        }
     }
 
     // Save to file as Binary
@@ -92,6 +106,22 @@ public:
             // Value als Binary speichern
             file.write(reinterpret_cast<const char*>(&value), sizeof(DBStruct));
         }
+
+        // Save index
+        size_t indexCount = index.size();
+        file.write(reinterpret_cast<const char*>(&indexCount), sizeof(indexCount));
+        for (const auto& [c, keys] : index) {
+            file.write(reinterpret_cast<const char*>(&c), sizeof(c));
+
+            size_t vecSize = keys.size();
+            file.write(reinterpret_cast<const char*>(&vecSize), sizeof(vecSize));
+
+            for (const auto& k : keys) {
+                size_t kSize = k.size();
+                file.write(reinterpret_cast<const char*>(&kSize), sizeof(kSize));
+                file.write(k.data(), kSize);
+            }
+        }
     }
 
     // Load from file as Binary
@@ -106,12 +136,12 @@ public:
         store.clear();
         index.clear();
 
-        // Load Number of entries
+        // Load number of entries
         size_t count;
         file.read(reinterpret_cast<char*>(&count), sizeof(count));
 
         // Load Entries
-            for (size_t i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
             size_t keySize;
             file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
 
@@ -121,7 +151,29 @@ public:
             DBStruct value;
             file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct));
 
-            put(key, value);
+            store[key] = value;
+        }
+
+        // Load index
+        size_t indexCount;
+        file.read(reinterpret_cast<char*>(&indexCount), sizeof(indexCount));
+        for (size_t i = 0; i < indexCount; ++i) {
+            char c;
+            file.read(reinterpret_cast<char*>(&c), sizeof(c));
+
+            size_t vecSize;
+            file.read(reinterpret_cast<char*>(&vecSize), sizeof(vecSize));
+
+            std::vector<std::string> keys(vecSize);
+            for (size_t j = 0; j < vecSize; ++j) {
+                size_t kSize;
+                file.read(reinterpret_cast<char*>(&kSize), sizeof(kSize));
+
+                keys[j].resize(kSize);
+                file.read(&keys[j][0], kSize);
+            }
+
+            index[c] = std::move(keys);
         }
     }
 
