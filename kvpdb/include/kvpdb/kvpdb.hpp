@@ -10,8 +10,6 @@
 #include <type_traits>
 #include <algorithm> // für std::remove
 #include <cstring>   // für std::strncpy
-
-#include <kvpdb/kvpdb_internal.hpp>
 #include <cstdint>
 
 
@@ -48,9 +46,16 @@ private:
     // Optional: einfacher sekundärer Index (z.B. nach erstem Buchstaben)
     std::unordered_map<char, std::vector<std::string>> index;
 
-    char databasename[12] = "dbname";
+    char databasename[12];
 
 public:
+    // Konstruktor
+    KeyValueDB(const std::string& name = "dbname") {
+        std::strncpy(databasename, name.c_str(), sizeof(databasename) - 1);
+        databasename[sizeof(databasename)-1] = '\0';
+    }
+
+
     // Insert / Update
     void put(const std::string& key, const DBStruct& value)
     {
@@ -62,6 +67,7 @@ public:
         }
     }
 
+
     // Read
     bool get(const std::string& key, DBStruct& value) const
     {
@@ -72,6 +78,7 @@ public:
         }
         return false;
     }
+
 
     // Delete
     void remove(const std::string& key)
@@ -90,6 +97,7 @@ public:
             store.erase(it);
         }
     }
+
 
     // Save to file as Binary
     void save(const std::string& filename) const
@@ -136,6 +144,7 @@ public:
         std::rename(temp.c_str(), filename.c_str());
     }
 
+
     // Load from file as Binary
     void load(const std::string& filename)
     {
@@ -145,8 +154,7 @@ public:
             return;
         }
 
-        store.clear();
-        index.clear();
+        clear();
 
         // to identify the DB
         char magic[4];
@@ -223,6 +231,7 @@ public:
         rebuildIndex();
     }
 
+
     // Get keys by first character (for testing)
     std::vector<std::string> getByFirstChar(char c) const
     {
@@ -233,6 +242,7 @@ public:
         return {};
     }
 
+
     // Print all key-value pairs (for testing)
     void printAll() const   
     {
@@ -241,6 +251,7 @@ public:
         }
     }
 
+
     // Function to rebuild the Index after loading a File
     void rebuildIndex()
     {
@@ -248,5 +259,18 @@ public:
         for (const auto& [key, _] : store) {
             index[key.empty() ? '\0' : key[0]].push_back(key);
         }
+    }
+
+
+    // to check if a value is in the database
+    bool contains(const std::string& key) const {
+        return store.find(key) != store.end();
+    }
+
+
+    // Function to clear the Database
+    void clear() {
+        store.clear();
+        index.clear();
     }
 };
