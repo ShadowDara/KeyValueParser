@@ -18,6 +18,7 @@
 constexpr uint64_t MAX_KEY_SIZE = 1024;
 constexpr uint64_t version = 1;
 
+
 // Beispielstruktur für die Werte
 struct default_db_struct
 {
@@ -46,6 +47,8 @@ private:
 
     // Optional: einfacher sekundärer Index (z.B. nach erstem Buchstaben)
     std::unordered_map<char, std::vector<std::string>> index;
+
+    char databasename[12] = "dbname";
 
 public:
     // Insert / Update
@@ -98,7 +101,15 @@ public:
             return;
         }
 
+        // for the identificating of the DB
+        const char magic[4] = {'K','V','D','B'};
+        file.write(magic, 4);
+
+        // Save the Version
         file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+
+        // Save the Database Name
+        file.write(reinterpret_cast<const char*>(&this->databasename), sizeof(this->databasename));
 
         // Save number of entries
         uint64_t count = store.size();
@@ -137,13 +148,42 @@ public:
         store.clear();
         index.clear();
 
+        // to identify the DB
+        char magic[4];
+        if (!file.read(magic, 4))
+        {
+            throw std::runtime_error("Read error (magic)");
+        }
+
+        if (std::memcmp(magic, "KVDB", 4) != 0)
+        {
+            throw std::runtime_error("Invalid file format");
+        }
+
+        // Read the Version
         uint64_t fileVersion;
-        if (!file.read(reinterpret_cast<char*>(&fileVersion), sizeof(fileVersion))) {
+        if (!file.read(reinterpret_cast<char*>(&fileVersion), sizeof(fileVersion)))
+        {
             throw std::runtime_error("Read error (version)");
         }
 
-        if (fileVersion != version) {
+        // Check the Version
+        if (fileVersion != version)
+        {
             throw std::runtime_error("Unsupported DB version");
+        }
+
+        // Check the DB Name
+        char dbname[12];
+        if (!file.read(reinterpret_cast<char*>(&dbname), sizeof(dbname)))
+        {
+            throw std::runtime_error("Read error (dbname)");
+        }
+
+        // Check the DB Name
+        if (std::memcmp(dbname, this->databasename, 12) != 0)
+        {
+            throw std::runtime_error("Invalid the DB Name");
         }
 
         // Load number of entries
