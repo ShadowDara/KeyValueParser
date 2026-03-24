@@ -12,7 +12,11 @@
 #include <cstring>   // für std::strncpy
 
 #include <kvpdb/kvpdb_internal.hpp>
+#include <cstdint>
 
+
+constexpr uint64_t MAX_KEY_SIZE = 1024;
+constexpr uint64_t version = 1;
 
 // Beispielstruktur für die Werte
 struct default_db_struct
@@ -87,41 +91,38 @@ public:
     // Save to file as Binary
     void save(const std::string& filename) const
     {
-        std::ofstream file(filename, std::ios::binary);
+        std::string temp = filename + ".tmp";
+        std::ofstream file(temp, std::ios::binary);
         if (!file) {
             std::cerr << "Fehler beim Öffnen der Datei zum Schreiben\n";
             return;
         }
 
+        file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+
         // Save number of entries
-        size_t count = store.size();
+        uint64_t count = store.size();
         file.write(reinterpret_cast<const char*>(&count), sizeof(count));
 
         // Save Entries
         for (const auto& [key, value] : store) {
-            size_t keySize = key.size();
+            uint64_t keySize = key.size();
             file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
             file.write(key.data(), keySize);
 
             // Value als Binary speichern
+            static_assert(std::is_trivially_copyable<DBStruct>::value,
+              "DBStruct must be trivially copyable!");
             file.write(reinterpret_cast<const char*>(&value), sizeof(DBStruct));
         }
 
-        // Save index
-        size_t indexCount = index.size();
-        file.write(reinterpret_cast<const char*>(&indexCount), sizeof(indexCount));
-        for (const auto& [c, keys] : index) {
-            file.write(reinterpret_cast<const char*>(&c), sizeof(c));
-
-            size_t vecSize = keys.size();
-            file.write(reinterpret_cast<const char*>(&vecSize), sizeof(vecSize));
-
-            for (const auto& k : keys) {
-                size_t kSize = k.size();
-                file.write(reinterpret_cast<const char*>(&kSize), sizeof(kSize));
-                file.write(k.data(), kSize);
-            }
+        file.flush();
+        if (!file) {
+            throw std::runtime_error("Write failed");
         }
+
+        file.close();
+        std::rename(temp.c_str(), filename.c_str());
     }
 
     // Load from file as Binary
@@ -136,14 +137,38 @@ public:
         store.clear();
         index.clear();
 
+        uint64_t fileVersion;
+        if (!file.read(reinterpret_cast<char*>(&fileVersion), sizeof(fileVersion))) {
+            throw std::runtime_error("Read error (version)");
+        }
+
+        if (fileVersion != version) {
+            throw std::runtime_error("Unsupported DB version");
+        }
+
         // Load number of entries
-        size_t count;
+        uint64_t count;
         file.read(reinterpret_cast<char*>(&count), sizeof(count));
 
+        // Check for Errors
+        if (!file.read(reinterpret_cast<char*>(&count), sizeof(count))) {
+            throw std::runtime_error("Read error (count)");
+        }
+
         // Load Entries
-        for (size_t i = 0; i < count; ++i) {
-            size_t keySize;
+        for (uint64_t i = 0; i < count; ++i) {
+            uint64_t keySize;
             file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+
+            if (!file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize)))
+            {
+                throw std::runtime_error("Read error (keySize)");
+            }
+
+            // Check the Keysize here
+            if (keySize > MAX_KEY_SIZE) {
+                throw std::runtime_error("Key too large");
+            }
 
             std::string key(keySize, '\0');
             file.read(&key[0], keySize);
@@ -154,27 +179,8 @@ public:
             store[key] = value;
         }
 
-        // Load index
-        size_t indexCount;
-        file.read(reinterpret_cast<char*>(&indexCount), sizeof(indexCount));
-        for (size_t i = 0; i < indexCount; ++i) {
-            char c;
-            file.read(reinterpret_cast<char*>(&c), sizeof(c));
-
-            size_t vecSize;
-            file.read(reinterpret_cast<char*>(&vecSize), sizeof(vecSize));
-
-            std::vector<std::string> keys(vecSize);
-            for (size_t j = 0; j < vecSize; ++j) {
-                size_t kSize;
-                file.read(reinterpret_cast<char*>(&kSize), sizeof(kSize));
-
-                keys[j].resize(kSize);
-                file.read(&keys[j][0], kSize);
-            }
-
-            index[c] = std::move(keys);
-        }
+        // make a new Index
+        rebuildIndex();
     }
 
     // Get keys by first character (for testing)
@@ -192,6 +198,15 @@ public:
     {
         for (const auto& pair : store) {
             std::cout << pair.first << " => " << pair.second << "\n";
+        }
+    }
+
+    // Function to rebuild the Index after loading a File
+    void rebuildIndex()
+    {
+        index.clear();
+        for (const auto& [key, _] : store) {
+            index[key.empty() ? '\0' : key[0]].push_back(key);
         }
     }
 };
