@@ -1,4 +1,3 @@
-*.json
 .vs/
 out/
 build/
