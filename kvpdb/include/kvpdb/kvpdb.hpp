@@ -148,8 +148,6 @@ public:
 
         // Load number of entries
         uint64_t count;
-        file.read(reinterpret_cast<char*>(&count), sizeof(count));
-
         // Check for Errors
         if (!file.read(reinterpret_cast<char*>(&count), sizeof(count))) {
             throw std::runtime_error("Read error (count)");
@@ -158,8 +156,6 @@ public:
         // Load Entries
         for (uint64_t i = 0; i < count; ++i) {
             uint64_t keySize;
-            file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
-
             if (!file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize)))
             {
                 throw std::runtime_error("Read error (keySize)");
@@ -171,10 +167,14 @@ public:
             }
 
             std::string key(keySize, '\0');
-            file.read(&key[0], keySize);
+            if (!file.read(&key[0], keySize)) {
+                throw std::runtime_error("Read error (key data)");
+            }
 
             DBStruct value;
-            file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct));
+            if (!file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct))) {
+                throw std::runtime_error("Read error (value)");
+            }
 
             store[key] = value;
         }
