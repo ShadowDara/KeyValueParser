@@ -13,6 +13,8 @@
 #include <cstdint>
 
 
+namespace KVPDB {
+
 constexpr uint64_t MAX_KEY_SIZE = 1024;
 constexpr uint64_t version = 1;
 
@@ -39,18 +41,22 @@ struct default_db_struct
 
 // Einfaches Key-Value Store mit Binary-Speicherung
 template <typename DBStruct = default_db_struct>
-class KeyValueDB {
+class KeyValueDB
+{
 private:
+    // store struct of the Database
     std::unordered_map<std::string, DBStruct> store;
 
     // Optional: einfacher sekundärer Index (z.B. nach erstem Buchstaben)
     std::unordered_map<char, std::vector<std::string>> index;
 
+    // name for the Database
     char databasename[12];
 
 public:
     // Konstruktor
-    KeyValueDB(const std::string& name = "dbname") {
+    KeyValueDB(const std::string& name = "dbname")
+    {
         std::strncpy(databasename, name.c_str(), sizeof(databasename) - 1);
         databasename[sizeof(databasename)-1] = '\0';
     }
@@ -62,7 +68,8 @@ public:
         bool isNewKey = (store.find(key) == store.end());
         store[key] = value;
 
-        if (isNewKey) {
+        if (isNewKey)
+        {
             index[key.empty() ? '\0' : key[0]].push_back(key);
         }
     }
@@ -72,7 +79,8 @@ public:
     bool get(const std::string& key, DBStruct& value) const
     {
         auto it = store.find(key);
-        if (it != store.end()) {
+        if (it != store.end())
+        {
             value = it->second;
             return true;
         }
@@ -84,12 +92,14 @@ public:
     void remove(const std::string& key)
     {
         auto it = store.find(key);
-        if (it != store.end()) {
+        if (it != store.end())
+        {
             // Entferne aus Index
             char c = key.empty() ? '\0' : key[0];
             auto& vec = index[c];
             vec.erase(std::remove(vec.begin(), vec.end(), key), vec.end());
-            if (vec.empty()) {
+            if (vec.empty())
+            {
                 index.erase(c);
             }
 
@@ -104,9 +114,9 @@ public:
     {
         std::string temp = filename + ".tmp";
         std::ofstream file(temp, std::ios::binary);
-        if (!file) {
-            std::cerr << "Fehler beim Öffnen der Datei zum Schreiben\n";
-            return;
+        if (!file)
+        {
+            throw std::runtime_error("Error opening the File to write");
         }
 
         // for the identificating of the DB
@@ -124,19 +134,21 @@ public:
         file.write(reinterpret_cast<const char*>(&count), sizeof(count));
 
         // Save Entries
-        for (const auto& [key, value] : store) {
+        for (const auto& [key, value] : store)
+        {
             uint64_t keySize = key.size();
             file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
             file.write(key.data(), keySize);
 
             // Value als Binary speichern
             static_assert(std::is_trivially_copyable<DBStruct>::value,
-              "DBStruct must be trivially copyable!");
+                "DBStruct must be trivially copyable!");
             file.write(reinterpret_cast<const char*>(&value), sizeof(DBStruct));
         }
 
         file.flush();
-        if (!file) {
+        if (!file)
+        {
             throw std::runtime_error("Write failed");
         }
 
@@ -149,9 +161,9 @@ public:
     void load(const std::string& filename)
     {
         std::ifstream file(filename, std::ios::binary);
-        if (!file) {
-            std::cerr << "Fehler beim Öffnen der Datei zum Lesen\n";
-            return;
+        if (!file)
+        {
+            throw std::runtime_error("Error opening the File to read");
         }
 
         clear();
@@ -197,12 +209,14 @@ public:
         // Load number of entries
         uint64_t count;
         // Check for Errors
-        if (!file.read(reinterpret_cast<char*>(&count), sizeof(count))) {
+        if (!file.read(reinterpret_cast<char*>(&count), sizeof(count)))
+        {
             throw std::runtime_error("Read error (count)");
         }
 
         // Load Entries
-        for (uint64_t i = 0; i < count; ++i) {
+        for (uint64_t i = 0; i < count; ++i)
+        {
             uint64_t keySize;
             if (!file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize)))
             {
@@ -210,17 +224,20 @@ public:
             }
 
             // Check the Keysize here
-            if (keySize > MAX_KEY_SIZE) {
+            if (keySize > MAX_KEY_SIZE)
+            {
                 throw std::runtime_error("Key too large");
             }
 
             std::string key(keySize, '\0');
-            if (!file.read(&key[0], keySize)) {
+            if (!file.read(&key[0], keySize))
+            {
                 throw std::runtime_error("Read error (key data)");
             }
 
             DBStruct value;
-            if (!file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct))) {
+            if (!file.read(reinterpret_cast<char*>(&value), sizeof(DBStruct)))
+            {
                 throw std::runtime_error("Read error (value)");
             }
 
@@ -236,7 +253,8 @@ public:
     std::vector<std::string> getByFirstChar(char c) const
     {
         auto it = index.find(c);
-        if (it != index.end()) {
+        if (it != index.end())
+        {
             return it->second;
         }
         return {};
@@ -246,7 +264,8 @@ public:
     // Print all key-value pairs (for testing)
     void printAll() const   
     {
-        for (const auto& pair : store) {
+        for (const auto& pair : store)
+        {
             std::cout << pair.first << " => " << pair.second << "\n";
         }
     }
@@ -256,21 +275,26 @@ public:
     void rebuildIndex()
     {
         index.clear();
-        for (const auto& [key, _] : store) {
+        for (const auto& [key, _] : store)
+        {
             index[key.empty() ? '\0' : key[0]].push_back(key);
         }
     }
 
 
     // to check if a value is in the database
-    bool contains(const std::string& key) const {
+    bool contains(const std::string& key) const
+    {
         return store.find(key) != store.end();
     }
 
 
     // Function to clear the Database
-    void clear() {
+    void clear()
+    {
         store.clear();
         index.clear();
     }
 };
+
+}

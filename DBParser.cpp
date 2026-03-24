@@ -5,8 +5,10 @@
 #include <vector>
 
 #include <kvpdb/kvpdb.hpp>
+#include <kvpdb/kvp_singledb.hpp>
 
 //using namespace kvpdb;
+using namespace KVPDB;
 
 
 int main() {
@@ -36,6 +38,13 @@ int main() {
     for (const auto& key : db2.getByFirstChar('a')) {
         std::cout << key << "\n";
     }
+
+
+    auto db3 = KVPSDB::SingleValueDB("name");
+    db3.put(KVPSDB::default_db_struct("jjj"));
+    KVPSDB::default_db_struct val;
+    db3.get(val);
+    std::cout << val.tempname << std::endl;
 
     return 0;
 }
