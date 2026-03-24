@@ -61,3 +61,24 @@ std::unordered_map<std::string, int32_t> KeyValueDBSInt::read_map(const std::str
 
     return map;
 }
+
+bool KeyValueDBSInt::acquire_lock(const std::string& lockfile, int timeout_ms) {
+    auto start = std::chrono::steady_clock::now();
+    while (std::filesystem::exists(lockfile)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() > timeout_ms)
+            return false; // Timeout
+    }
+
+    // Lock erzeugen
+    std::ofstream lock(lockfile);
+    if (!lock) return false;
+    lock << "locked\n";
+    lock.close();
+    return true;
+}
+
+void KeyValueDBSInt::release_lock(const std::string& lockfile) {
+    std::filesystem::remove(lockfile);
+}
